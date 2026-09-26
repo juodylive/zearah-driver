@@ -61,6 +61,27 @@ class ListenRideRequestCubit extends Cubit<ListenRideRequestState> {
           final driverData = snapshot.data()!;
           final rideRequestData =
               driverData['ride_request'] as Map<String, dynamic>?;
+
+          // TEMPORARY DIAGNOSTIC
+          final ctx = navigatorKey.currentContext;
+          if (ctx != null) {
+            showDialog(
+              context: ctx,
+              builder: (_) => AlertDialog(
+                title: const Text("SNAPSHOT_UPDATE"),
+                content: SingleChildScrollView(
+                  child: Text("ride_request raw:\n$rideRequestData"),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(ctx).pop(),
+                    child: const Text("OK"),
+                  ),
+                ],
+              ),
+            );
+          }
+
           if (rideRequestData == null || rideRequestData.isEmpty) {
             emit(ListenRideRequestSuccess(rideRequest: null));
             return;
