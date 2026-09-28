@@ -64,6 +64,23 @@ class _ItemHomeScreenState extends State<ItemHomeScreen>
         context.read<UpdateDriverParameterCubit>().updateDriverId(driverId: driverIdUpdated.toString());
         _startupBarrier = checkAndCleanRideOnStartup(driverId: driverIdUpdated);
         await _startupBarrier;
+        // TEMPORARY DIAGNOSTIC: confirms the startup check finished.
+        final ctxDiag0 = navigatorKey.currentContext;
+        if (ctxDiag0 != null) {
+          showDialog(
+            context: ctxDiag0,
+            builder: (_) => AlertDialog(
+              title: const Text("STARTUP_BARRIER_DONE"),
+              content: const Text("checkAndCleanRideOnStartup finished"),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctxDiag0).pop(),
+                  child: const Text("OK"),
+                ),
+              ],
+            ),
+          );
+        }
          // ignore_for_file: use_build_context_synchronously
         context
             .read<GetDocApprovalStatusCubit>()
@@ -72,6 +89,23 @@ class _ItemHomeScreenState extends State<ItemHomeScreen>
             .read<GetDriverStatusCubit>()
             .listenDriverStatusStatus(driverId: driverIdUpdated);
 
+        // TEMPORARY DIAGNOSTIC: shows which driverId the listener starts with.
+        final ctxDiag = navigatorKey.currentContext;
+        if (ctxDiag != null) {
+          showDialog(
+            context: ctxDiag,
+            builder: (_) => AlertDialog(
+              title: const Text("LISTENER_STARTING"),
+              content: Text("driverIdUpdated = $driverIdUpdated"),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctxDiag).pop(),
+                  child: const Text("OK"),
+                ),
+              ],
+            ),
+          );
+        }
         context
             .read<ListenRideRequestCubit>()
             .listenForRideRequests(driverIdUpdated, context: context);
