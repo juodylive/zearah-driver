@@ -59,27 +59,34 @@ class ListenRideRequestCubit extends Cubit<ListenRideRequestState> {
           .listen((snapshot) {
         if (snapshot.exists && snapshot.data() != null) {
           final driverData = snapshot.data()!;
-          final rideRequestData =
-              driverData['ride_request'] as Map<String, dynamic>?;
+          // ride_request can be an empty List ([]) when the driver document
+          // was created by the backend, so never cast it blindly to a Map.
+          final rawRideRequest = driverData['ride_request'];
+          final Map<String, dynamic>? rideRequestData =
+              rawRideRequest is Map
+                  ? Map<String, dynamic>.from(rawRideRequest)
+                  : null;
 
-          // TEMPORARY DIAGNOSTIC
-          final ctx = navigatorKey.currentContext;
-          if (ctx != null) {
-            showDialog(
-              context: ctx,
-              builder: (_) => AlertDialog(
-                title: const Text("SNAPSHOT_UPDATE"),
-                content: SingleChildScrollView(
-                  child: Text("ride_request raw:\n$rideRequestData"),
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(ctx).pop(),
-                    child: const Text("OK"),
+          // TEMPORARY DIAGNOSTIC: only when a real request arrives.
+          if (rideRequestData != null && rideRequestData.isNotEmpty) {
+            final ctxSnap = navigatorKey.currentContext;
+            if (ctxSnap != null) {
+              showDialog(
+                context: ctxSnap,
+                builder: (_) => AlertDialog(
+                  title: const Text("RIDE_REQUEST_RECEIVED"),
+                  content: SingleChildScrollView(
+                    child: Text("$rideRequestData"),
                   ),
-                ],
-              ),
-            );
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctxSnap).pop(),
+                      child: const Text("OK"),
+                    ),
+                  ],
+                ),
+              );
+            }
           }
 
           if (rideRequestData == null || rideRequestData.isEmpty) {
@@ -669,7 +676,10 @@ Future<void> checkAndCleanRideOnStartup({
     if (!driverDoc.exists || driverDoc.data() == null) return;
      final data = driverDoc.data()!;
     final driverIdNumeric=data["driverId"].toString();
-    final rideReq = (data['ride_request'] as Map<String, dynamic>?) ?? {};
+    final rawRideReq = data['ride_request'];
+    final Map<String, dynamic> rideReq = rawRideReq is Map
+        ? Map<String, dynamic>.from(rawRideReq)
+        : <String, dynamic>{};
     if (rideReq.isEmpty) return;
      final rideId = rideReq['rideId']?.toString() ?? '';
     final requestTime=   rideReq['requestTime'];
