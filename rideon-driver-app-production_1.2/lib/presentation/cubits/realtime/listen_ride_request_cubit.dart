@@ -59,36 +59,8 @@ class ListenRideRequestCubit extends Cubit<ListenRideRequestState> {
           .listen((snapshot) {
         if (snapshot.exists && snapshot.data() != null) {
           final driverData = snapshot.data()!;
-          // ride_request can be an empty List ([]) when the driver document
-          // was created by the backend, so never cast it blindly to a Map.
-          final rawRideRequest = driverData['ride_request'];
-          final Map<String, dynamic>? rideRequestData =
-              rawRideRequest is Map
-                  ? Map<String, dynamic>.from(rawRideRequest)
-                  : null;
-
-          // TEMPORARY DIAGNOSTIC: only when a real request arrives.
-          if (rideRequestData != null && rideRequestData.isNotEmpty) {
-            final ctxSnap = navigatorKey.currentContext;
-            if (ctxSnap != null) {
-              showDialog(
-                context: ctxSnap,
-                builder: (_) => AlertDialog(
-                  title: const Text("RIDE_REQUEST_RECEIVED"),
-                  content: SingleChildScrollView(
-                    child: Text("$rideRequestData"),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(ctxSnap).pop(),
-                      child: const Text("OK"),
-                    ),
-                  ],
-                ),
-              );
-            }
-          }
-
+          final rideRequestData =
+              driverData['ride_request'] as Map<String, dynamic>?;
           if (rideRequestData == null || rideRequestData.isEmpty) {
             emit(ListenRideRequestSuccess(rideRequest: null));
             return;
@@ -103,27 +75,7 @@ class ListenRideRequestCubit extends Cubit<ListenRideRequestState> {
               rideId: rideRequest.rideId,
             ));
           } catch (e) {
-            // TEMPORARY DIAGNOSTIC: show the parse error and raw data on
-            // screen so it can be captured with a screenshot. Remove this
-            // block once the root cause is fixed.
-            final ctx = navigatorKey.currentContext;
-            if (ctx != null) {
-              showDialog(
-                context: ctx,
-                builder: (_) => AlertDialog(
-                  title: const Text("RIDE_REQUEST_PARSE_ERROR"),
-                  content: SingleChildScrollView(
-                    child: Text("Error: $e\n\nRaw data: $rideRequestData"),
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.of(ctx).pop(),
-                      child: const Text("OK"),
-                    ),
-                  ],
-                ),
-              );
-            }
+            //
           }
         } else {
         }
@@ -676,10 +628,7 @@ Future<void> checkAndCleanRideOnStartup({
     if (!driverDoc.exists || driverDoc.data() == null) return;
      final data = driverDoc.data()!;
     final driverIdNumeric=data["driverId"].toString();
-    final rawRideReq = data['ride_request'];
-    final Map<String, dynamic> rideReq = rawRideReq is Map
-        ? Map<String, dynamic>.from(rawRideReq)
-        : <String, dynamic>{};
+    final rideReq = (data['ride_request'] as Map<String, dynamic>?) ?? {};
     if (rideReq.isEmpty) return;
      final rideId = rideReq['rideId']?.toString() ?? '';
     final requestTime=   rideReq['requestTime'];
