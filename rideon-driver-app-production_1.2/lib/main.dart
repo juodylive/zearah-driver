@@ -312,7 +312,7 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
             return BlocBuilder<LanguageCubit, LanguageState>(
               builder: (context, state) {
                 if (state is LanguageLoader) {
-                  appLocale = Locale(state.language ?? "en");
+                  appLocale = Locale(state.language ?? "ar");
                 }
 
                 return MaterialApp(
@@ -323,8 +323,8 @@ class MyAppState extends State<MyApp> with WidgetsBindingObserver {
                   debugShowCheckedModeBanner: false,
                   locale: appLocale,
                   supportedLocales: const [
-                    Locale('en', 'US'),
                     Locale('ar', 'AR'),
+                    Locale('en', 'US'),
                   ],
                   localizationsDelegates: const [
                     AppLocalizations.delegate,
