@@ -59,8 +59,14 @@ class ListenRideRequestCubit extends Cubit<ListenRideRequestState> {
           .listen((snapshot) {
         if (snapshot.exists && snapshot.data() != null) {
           final driverData = snapshot.data()!;
-          final rideRequestData =
-              driverData['ride_request'] as Map<String, dynamic>?;
+          // ride_request can be an empty List ([]) when the driver document
+          // was created by the backend, so never cast it blindly to a Map.
+          final rawRideRequest = driverData['ride_request'];
+          final Map<String, dynamic>? rideRequestData =
+              rawRideRequest is Map
+                  ? Map<String, dynamic>.from(rawRideRequest)
+                  : null;
+
           if (rideRequestData == null || rideRequestData.isEmpty) {
             emit(ListenRideRequestSuccess(rideRequest: null));
             return;
@@ -75,7 +81,7 @@ class ListenRideRequestCubit extends Cubit<ListenRideRequestState> {
               rideId: rideRequest.rideId,
             ));
           } catch (e) {
-            //
+            debugPrint("RIDE_REQUEST_PARSE_ERROR: $e");
           }
         } else {
         }
@@ -628,7 +634,10 @@ Future<void> checkAndCleanRideOnStartup({
     if (!driverDoc.exists || driverDoc.data() == null) return;
      final data = driverDoc.data()!;
     final driverIdNumeric=data["driverId"].toString();
-    final rideReq = (data['ride_request'] as Map<String, dynamic>?) ?? {};
+    final rawRideReq = data['ride_request'];
+    final Map<String, dynamic> rideReq = rawRideReq is Map
+        ? Map<String, dynamic>.from(rawRideReq)
+        : <String, dynamic>{};
     if (rideReq.isEmpty) return;
      final rideId = rideReq['rideId']?.toString() ?? '';
     final requestTime=   rideReq['requestTime'];
