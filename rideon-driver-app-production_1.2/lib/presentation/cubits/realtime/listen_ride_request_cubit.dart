@@ -43,6 +43,7 @@ class ListenRideRequestCubit extends Cubit<ListenRideRequestState> {
 
   StreamSubscription<DatabaseEvent>? _addedSubscription;
   StreamSubscription<DatabaseEvent>? _changedSubscription;
+  StreamSubscription<dynamic>? _driverSubscription;
 
   void listenForRideRequests(String driverId, {required BuildContext context}) {
 
@@ -52,7 +53,8 @@ class ListenRideRequestCubit extends Cubit<ListenRideRequestState> {
       return;
     }
     try {
-      FirebaseFirestore.instance
+      _driverSubscription?.cancel();
+      _driverSubscription = FirebaseFirestore.instance
           .collection('drivers')
           .doc(driverId)
           .snapshots()
@@ -101,6 +103,7 @@ class ListenRideRequestCubit extends Cubit<ListenRideRequestState> {
   void stopListening() {
     _addedSubscription?.cancel();
     _changedSubscription?.cancel();
+    _driverSubscription?.cancel();
 
     emit(ListenRideRequestInitial());
 
@@ -121,7 +124,10 @@ class UpdateBookingIdCubit extends Cubit<String> {
     required String rideId,
   }) async {
     try {
-      final snapshot = await _rideRequestsRef.child(rideId).get();
+      final snapshot = await _rideRequestsRef
+          .child(rideId)
+          .get()
+          .timeout(const Duration(seconds: 10));
 
       if (snapshot.exists) {
         final rideData = Map<String, dynamic>.from(snapshot.value as Map);
@@ -139,7 +145,10 @@ class UpdateBookingIdCubit extends Cubit<String> {
     required String rideId,
   }) async {
     try {
-      final snapshot = await _rideRequestsRef.child(rideId).get();
+      final snapshot = await _rideRequestsRef
+          .child(rideId)
+          .get()
+          .timeout(const Duration(seconds: 10));
 
       if (snapshot.exists) {
         final rideData = Map<String, dynamic>.from(snapshot.value as Map);
@@ -208,7 +217,8 @@ class UpdateRideRequestCubit extends Cubit<UpdateRideRequestState> {
 
       final driverDocRef =
           FirebaseFirestore.instance.collection('drivers').doc(driverId);
-      final driverSnapshot = await driverDocRef.get();
+      final driverSnapshot =
+          await driverDocRef.get().timeout(const Duration(seconds: 10));
 
       if (!driverSnapshot.exists) {
 
@@ -247,7 +257,10 @@ class UpdateRideRequestCubit extends Cubit<UpdateRideRequestState> {
     required String newStatus,
   }) async {
     try {
-      final snapshot = await _rideRequestsRef.child(rideId).get();
+      final snapshot = await _rideRequestsRef
+          .child(rideId)
+          .get()
+          .timeout(const Duration(seconds: 10));
 
       if (snapshot.exists) {
 
@@ -283,7 +296,8 @@ class UpdateRideRequestCubit extends Cubit<UpdateRideRequestState> {
 
       final driverDocRef =
           FirebaseFirestore.instance.collection('drivers').doc(driverId);
-      final driverSnapshot = await driverDocRef.get();
+      final driverSnapshot =
+          await driverDocRef.get().timeout(const Duration(seconds: 10));
 
       if (!driverSnapshot.exists) {
 
@@ -628,12 +642,13 @@ Future<void> checkAndCleanRideOnStartup({
     final driverDoc = await FirebaseFirestore.instance
         .collection('drivers')
         .doc(driverId)
-        .get();
+        .get()
+        .timeout(const Duration(seconds: 8));
 
 
     if (!driverDoc.exists || driverDoc.data() == null) return;
      final data = driverDoc.data()!;
-    final driverIdNumeric=data["driverId"].toString();
+    final driverIdNumeric = (data["driverId"] ?? '').toString();
     final rawRideReq = data['ride_request'];
     final Map<String, dynamic> rideReq = rawRideReq is Map
         ? Map<String, dynamic>.from(rawRideReq)
@@ -647,7 +662,7 @@ Future<void> checkAndCleanRideOnStartup({
       return;
     }
      final rideRef = FirebaseDatabase.instance.ref('ride_requests/$rideId');
-    final snap = await rideRef.get();
+    final snap = await rideRef.get().timeout(const Duration(seconds: 8));
 
     if (!snap.exists) {
       await _clearDriverRideRequest(driverId);
@@ -684,7 +699,10 @@ Future<void> checkAndCleanRideOnStartup({
       if (reqTime != null) {
         final now = DateTime.now();
         final diff = now.difference(reqTime).inSeconds;
-        final howMuchDiff=int.parse(navigatorKey.currentContext!.read<DriverSearchIntervalCubit>().state.value??box.get("DriverSearchIntervalCubit")??60)+5;
+        final ctx = navigatorKey.currentContext;
+        final intervalRaw = ctx?.read<DriverSearchIntervalCubit>().state.value ??
+            box.get("DriverSearchIntervalCubit");
+        final howMuchDiff = (int.tryParse(intervalRaw?.toString() ?? '') ?? 60) + 5;
 
         if (diff > howMuchDiff) {
           debugPrint(
@@ -718,6 +736,9 @@ Future<void> checkAndCleanRideOnStartup({
       debugPrint('Ride timestamp missing/invalid for $rideId');
     }
 
+  } on TimeoutException catch (e) {
+    // Never block app startup if Firebase does not answer.
+    debugPrint('checkAndCleanRideOnStartup timeout: $e');
   } catch (e) {
     debugPrint('checkAndCleanRideOnStartup error: $e');
   }
